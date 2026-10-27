@@ -1,0 +1,6 @@
+{
+  "name":"applytrack-backend","version":"1.0.0","private":true,"type":"module",
+  "scripts":{"build":"tsc -p tsconfig.json","test":"vitest run"},
+  "dependencies":{"@aws-sdk/client-dynamodb":"^3.850.0","@aws-sdk/client-s3":"^3.850.0","@aws-sdk/lib-dynamodb":"^3.850.0","@aws-sdk/s3-presigned-post":"^3.850.0","zod":"^4.1.12"},
+  "devDependencies":{"@types/aws-lambda":"^8.10.145","@types/node":"^22.15.30","typescript":"^5.9.2","vitest":"^3.2.4"}
+}

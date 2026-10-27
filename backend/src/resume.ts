@@ -1,0 +1,8 @@
+import { randomUUID } from 'node:crypto';
+import { S3Client } from '@aws-sdk/client-s3';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
+import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+import { json, parseBody, safeError, userIdFrom } from './shared/http.js';
+const s3=new S3Client({});const bucket=process.env.RESUMES_BUCKET;
+const allowed=new Set(['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+export const handler:APIGatewayProxyHandlerV2=async(event)=>{try{userIdFrom(event);if(event.requestContext.http.method!=='POST')return json(405,{message:'Method not allowed.'});if(!bucket)throw new Error('Server configuration error');const body=parseBody(event) as {name?:unknown;contentType?:unknown;size?:unknown};if(typeof body.name!=='string'||body.name.length<1||body.name.length>255)throw new Error('VALIDATION:Provide a valid resume filename.');if(typeof body.contentType!=='string'||!allowed.has(body.contentType))throw new Error('VALIDATION:Only PDF and DOCX files are allowed.');if(typeof body.size!=='number'||!Number.isInteger(body.size)||body.size<1||body.size>5*1024*1024)throw new Error('VALIDATION:Resume must be between 1 byte and 5 MB.');const userId=userIdFrom(event);const ext=body.contentType==='application/pdf'?'pdf':'docx';const resumeKey=`${userId}/${randomUUID()}.${ext}`;const post=await createPresignedPost(s3,{Bucket:bucket,Key:resumeKey,Expires:180,Fields:{'Content-Type':body.contentType},Conditions:[['content-length-range',1,5*1024*1024],['eq','$Content-Type',body.contentType]]});return json(200,{uploadUrl:post.url,fields:post.fields,resumeKey,expiresIn:180});}catch(error){return safeError(error);}};

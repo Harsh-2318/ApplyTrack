@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+coverage/
+.env
+.env.local
+.env.*.local
+!.env.example
+.aws-sam/
+dist/
+*.log
+.DS_Store
+backend/node_modules/
+backend/dist/
+*.zip
+*.tsbuildinfo

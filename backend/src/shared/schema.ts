@@ -1,0 +1,4 @@
+import { z } from 'zod';
+export const statusSchema=z.enum(['Applied','Interview','Assessment','Offer','Rejected']);
+export const applicationSchema=z.object({company:z.string().trim().min(1).max(120),jobTitle:z.string().trim().min(1).max(120),location:z.string().trim().max(120).default(''),applicationDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),status:statusSchema,jobUrl:z.string().trim().max(2048).refine(v=>!v||/^https?:\/\/.+/.test(v),'Job URL must use http or https').default(''),notes:z.string().max(4000).default(''),resumeKey:z.string().max(500).optional(),resumeName:z.string().max(255).optional()});
+export function parseApplication(input:unknown){const result=applicationSchema.safeParse(input);if(!result.success)throw new Error(`VALIDATION:${result.error.issues[0]?.message||'Invalid application data.'}`);return result.data;}
