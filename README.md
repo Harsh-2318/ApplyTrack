@@ -181,3 +181,5 @@ All API routes require a Cognito JWT (API Gateway HTTP API JWT authorizer):
 - There is no server-side pagination yet; the list query returns all records for the authenticated user.
 - Resume download, malware scanning, automatic orphan cleanup, email notifications and reminders are not implemented.
 - AWS deployment/live URL cannot be verified without deploying into your own AWS account.
+# ApplyTrack
+Job Application Tracker Web App
