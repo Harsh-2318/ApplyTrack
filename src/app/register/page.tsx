@@ -1,5 +1,68 @@
+
 'use client';
+
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, ClipboardList, ShieldCheck } from 'lucide-react';
-export default function RegisterPage(){const [origin,setOrigin]=useState('http://localhost:3000');useEffect(()=>setOrigin(window.location.origin),[]);const pool=process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;const client=process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;const domain=process.env.NEXT_PUBLIC_COGNITO_DOMAIN;const redirect=`${origin}/login`;return <main className="auth-page"><Link href="/" className="brand"><span className="brand-mark"><ClipboardList size={21}/></span>ApplyTrack</Link><section className="auth-card"><span className="auth-symbol"><ShieldCheck size={25}/></span><span className="eyebrow">CREATE YOUR WORKSPACE</span><h1>Start tracking securely.</h1><p>Account creation is handled by Amazon Cognito when AWS mode is configured. This keeps passwords out of the ApplyTrack application.</p>{pool&&client&&domain?<a className="button button-primary auth-wide" href={`${domain.replace(/\/$/,'')}/signup?client_id=${client}&response_type=token&scope=openid+email+profile&redirect_uri=${encodeURIComponent(redirect)}`}>Create account</a>:<div className="alert">Cognito is not configured yet. Follow the AWS deployment steps in README.md, then set the Cognito environment variables.</div>}<Link className="auth-back" href="/login"><ArrowLeft size={14}/> Already have an account? Sign in</Link></section></main>}
+import { startCognitoAuth } from '@/lib/cognito';
+
+export default function RegisterPage() {
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const pool = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const client = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
+
+  async function createAccount() {
+    setMessage('');
+    setLoading(true);
+
+    try {
+      await startCognitoAuth('signup');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Unable to open account registration.');
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="auth-page">
+      <Link href="/" className="brand">
+        <span className="brand-mark"><ClipboardList size={21} /></span>
+        ApplyTrack
+      </Link>
+
+      <section className="auth-card">
+        <span className="auth-symbol"><ShieldCheck size={25} /></span>
+        <span className="eyebrow">CREATE YOUR WORKSPACE</span>
+        <h1>Start tracking securely.</h1>
+        <p>
+          Create an account with Amazon Cognito. Your password is handled by
+          AWS, not stored by ApplyTrack.
+        </p>
+
+        {pool && client && domain ? (
+          <button
+            type="button"
+            className="button button-primary auth-wide"
+            onClick={createAccount}
+            disabled={loading}
+          >
+            {loading ? 'Opening registration…' : 'Create account'}
+          </button>
+        ) : (
+          <div className="alert">
+            Cognito environment variables are missing. Configure the frontend environment first.
+          </div>
+        )}
+
+        {message && <p className="auth-message">{message}</p>}
+
+        <Link className="auth-back" href="/login">
+          <ArrowLeft size={14} /> Already have an account? Sign in
+        </Link>
+      </section>
+    </main>
+  );
+}

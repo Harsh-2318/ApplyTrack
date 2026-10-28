@@ -1,0 +1,10 @@
+﻿version = 0.1
+
+[default.deploy.parameters]
+stack_name = "applytrack-stack"
+resolve_s3 = true
+s3_prefix = "applytrack-stack"
+region = "ap-southeast-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "FrontendOrigin=https://applytrack-0zts.onrender.com CognitoDomainPrefix=applytrack-harsh-2318-20261028 ExistingApplicationsTableName=ApplyTrackApplications"

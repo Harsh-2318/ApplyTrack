@@ -14,5 +14,6 @@ export const api = {
   create: (token: string, input: ApplicationInput) => request<JobApplication>('/applications', token, {method:'POST', body:JSON.stringify(input)}),
   update: (token: string, id: string, input: ApplicationInput) => request<JobApplication>(`/applications/${encodeURIComponent(id)}`, token, {method:'PUT',body:JSON.stringify(input)}),
   remove: (token: string, id: string) => request<void>(`/applications/${encodeURIComponent(id)}`, token, {method:'DELETE'}),
-  authorizeResume: (token: string, file: {name:string;contentType:string;size:number}) => request<{uploadUrl:string;fields:Record<string,string>;resumeKey:string;expiresIn:number}>('/resumes/presign', token, {method:'POST',body:JSON.stringify(file)})
+  authorizeResume: (token: string, file: {name:string;contentType:string;size:number}) => request<{uploadUrl:string;fields:Record<string,string>;resumeKey:string;expiresIn:number}>('/resume/presign', token, {method:'POST',body:JSON.stringify(file)})
 };
+

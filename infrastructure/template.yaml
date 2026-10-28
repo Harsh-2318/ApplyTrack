@@ -6,13 +6,18 @@ Description: ApplyTrack serverless job application tracker. No EC2 resources.
 Parameters:
   FrontendOrigin:
     Type: String
-    Default: http://localhost:3000
-    Description: Exact frontend origin for API CORS, e.g. https://your-app.amplifyapp.com
+    Default: https://applytrack-0zts.onrender.com
+    Description: Primary frontend origin for API and S3 CORS
 
   CognitoDomainPrefix:
     Type: String
     Description: Globally unique Cognito hosted UI domain prefix, lowercase letters/numbers/hyphens
     AllowedPattern: '^[a-z0-9-]+$'
+
+  ExistingApplicationsTableName:
+    Type: String
+    Default: ApplyTrackApplications
+    Description: Name of the existing DynamoDB applications table
 
 Globals:
   Function:
@@ -23,7 +28,7 @@ Globals:
     Timeout: 10
     Environment:
       Variables:
-        APPLICATIONS_TABLE: !Ref ApplicationsTable
+        APPLICATIONS_TABLE: !Ref ExistingApplicationsTableName
         RESUMES_BUCKET: !Ref ResumesBucket
         ALLOWED_ORIGIN: !Ref FrontendOrigin
 
@@ -35,6 +40,7 @@ Resources:
       CorsConfiguration:
         AllowOrigins:
           - !Ref FrontendOrigin
+          - http://localhost:3000
         AllowHeaders:
           - authorization
           - content-type
@@ -55,25 +61,6 @@ Resources:
                 - !Ref UserPoolClient
         DefaultAuthorizer: CognitoJwtAuthorizer
 
-  ApplicationsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: userId
-          AttributeType: S
-        - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: userId
-          KeyType: HASH
-        - AttributeName: id
-          KeyType: RANGE
-      SSESpecification:
-        SSEEnabled: true
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: false
-
   ResumesBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -93,58 +80,59 @@ Resources:
         CorsRules:
           - AllowedOrigins:
               - !Ref FrontendOrigin
+              - http://localhost:3000
             AllowedMethods:
               - POST
             AllowedHeaders:
               - '*'
-            ExposedHeaders:
-              - ETag
             MaxAge: 3000
 
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: !Sub 'applytrack-users-${AWS::StackName}'
+      UserPoolName: ApplyTrackUsers
       AutoVerifiedAttributes:
         - email
       UsernameAttributes:
         - email
       Policies:
         PasswordPolicy:
-          MinimumLength: 10
+          MinimumLength: 8
           RequireLowercase: true
           RequireUppercase: true
           RequireNumbers: true
-          RequireSymbols: true
-      AccountRecoverySetting:
-        RecoveryMechanisms:
-          - Name: verified_email
-            Priority: 1
+          RequireSymbols: false
+      Schema:
+        - Name: email
+          Required: true
+          Mutable: true
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
+      ClientName: ApplyTrackWebClient
       UserPoolId: !Ref UserPool
-      ClientName: applytrack-web
       GenerateSecret: false
       ExplicitAuthFlows:
         - ALLOW_USER_SRP_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
-      AllowedOAuthFlowsUserPoolClient: true
-      AllowedOAuthFlows:
-        - implicit
-      AllowedOAuthScopes:
-        - openid
-        - email
-        - profile
       SupportedIdentityProviders:
         - COGNITO
       CallbackURLs:
-        - http://localhost:3000/login
-        - !Sub '${FrontendOrigin}/login'
-      LogoutURLs:
-        - http://localhost:3000/
+        - !Sub '${FrontendOrigin}/'
         - !Ref FrontendOrigin
+        - http://localhost:3000/login
+      LogoutURLs:
+        - !Sub '${FrontendOrigin}/'
+        - !Ref FrontendOrigin
+        - http://localhost:3000/
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
 
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
@@ -161,7 +149,7 @@ Resources:
       Handler: dist/applications.handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ApplicationsTable
+            TableName: !Ref ExistingApplicationsTableName
       Events:
         ListApplications:
           Type: HttpApi
@@ -209,26 +197,26 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref ApplyTrackApi
-            Path: /resumes/presign
+            Path: /resume/presign
             Method: POST
 
 Outputs:
   ApiUrl:
-    Description: API Gateway HTTPS base URL
+    Description: ApplyTrack API endpoint
     Value: !Sub 'https://${ApplyTrackApi}.execute-api.${AWS::Region}.amazonaws.com'
 
   UserPoolId:
-    Description: Cognito user pool ID
+    Description: Cognito User Pool ID
     Value: !Ref UserPool
 
   UserPoolClientId:
-    Description: Cognito public app client ID
+    Description: Cognito User Pool Client ID
     Value: !Ref UserPoolClient
 
   CognitoHostedUiDomain:
-    Description: Cognito hosted UI base URL
+    Description: Cognito Hosted UI domain
     Value: !Sub 'https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com'
 
   ResumeBucketName:
-    Description: Private resume bucket name
+    Description: Private S3 bucket for resume uploads
     Value: !Ref ResumesBucket
